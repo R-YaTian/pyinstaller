@@ -526,11 +526,17 @@ class EXE(Target):
             raise SystemExit(_MISSING_BOOTLOADER_ERRORMSG)
 
 
-        if is_win and (self.icon or self.versrsrc or self.resources):
+        if is_win:
             tmpnm = tempfile.mktemp()
             self._copyfile(exe, tmpnm)
             os.chmod(tmpnm, 0o755)
-            if self.icon:
+            if not self.icon:
+                # --icon not specified; use default from bootloader folder
+                self.icon = os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    'bootloader', 'images',
+                    'icon-console.ico' if self.console else 'icon-windowed.ico')
+            if self.icon != "NONE":
                 icon.CopyIcons(tmpnm, self.icon)
             if self.versrsrc:
                 versioninfo.SetVersion(tmpnm, self.versrsrc)
@@ -582,7 +588,7 @@ class EXE(Target):
                         logger.error("Error while updating resource %s %s in %s"
                                      " from data file %s",
                                      restype, resname, tmpnm, resfile, exc_info=1)
-            if is_win and self.manifest and not self.exclude_binaries:
+            if self.manifest and not self.exclude_binaries:
                 self.manifest.update_resources(tmpnm, [1])
             trash.append(tmpnm)
             exe = tmpnm
